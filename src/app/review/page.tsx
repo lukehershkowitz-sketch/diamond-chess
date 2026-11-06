@@ -1,177 +1,256 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Chessboard } from "react-chessboard";
 import { EvalGraph } from "@/components/EvalGraph";
+import { EvalBar } from "@/components/review/EvalBar";
+import { ImportPanel, type GameChoice } from "@/components/review/ImportPanel";
+import { KeyMoments } from "@/components/review/KeyMoments";
+import { MoveList } from "@/components/review/MoveList";
+import { Summary } from "@/components/review/Summary";
 import { UciEngine } from "@/lib/engine/uci";
+import { loadOpenings } from "@/lib/openings";
 import { analyzeGame, type GameReview } from "@/lib/review/analyzeGame";
+import { CLASS_META, describeMove, formatScore } from "@/lib/review/labels";
 import type { MoveClass } from "@/lib/review/types";
+import { Chess } from "chess.js";
 
-const SAMPLE =
-  "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7";
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-const BADGE: Record<MoveClass, { label: string; color: string }> = {
-  brilliant: { label: "!!", color: "bg-cyan-500" },
-  great: { label: "!", color: "bg-blue-500" },
-  best: { label: "★", color: "bg-green-600" },
-  excellent: { label: "✓", color: "bg-green-500" },
-  good: { label: "·", color: "bg-lime-600" },
-  book: { label: "B", color: "bg-amber-700" },
-  inaccuracy: { label: "?!", color: "bg-yellow-500" },
-  mistake: { label: "?", color: "bg-orange-500" },
-  blunder: { label: "??", color: "bg-red-600" },
+const DEPTHS = [
+  { label: "Fast", depth: 12 },
+  { label: "Standard", depth: 16 },
+  { label: "Deep", depth: 20 },
+];
+const TINT: Partial<Record<MoveClass, string>> = {
+  brilliant: "rgba(6,182,212,.45)",
+  great: "rgba(59,130,246,.45)",
+  inaccuracy: "rgba(234,179,8,.45)",
+  mistake: "rgba(249,115,22,.5)",
+  blunder: "rgba(220,38,38,.5)",
 };
 
+function headerName(pgn: string, tag: "White" | "Black") {
+  return pgn.match(new RegExp(`\\[${tag} "([^"]*)"\\]`))?.[1];
+}
+
 export default function ReviewPage() {
-  const [pgn, setPgn] = useState(SAMPLE);
+  const [game, setGame] = useState<GameChoice | null>(null);
   const [review, setReview] = useState<GameReview | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ply, setPly] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [depth, setDepth] = useState(16);
   const engineRef = useRef<UciEngine | null>(null);
 
   useEffect(() => () => engineRef.current?.terminate(), []);
 
-  const run = useCallback(async () => {
-    setError(null);
-    setReview(null);
-    setPly(0);
-    setProgress({ done: 0, total: 1 });
-    try {
+  const analyze = useCallback(
+    async (choice: GameChoice) => {
       engineRef.current?.terminate();
+      setError(null);
+      setReview(null);
+      setPly(0);
+      setGame(choice);
+      setFlipped(choice.orientation === "black");
+      try {
+        // Validate the PGN before starting the engine, so typos fail fast.
+        new Chess().loadPgn(choice.pgn);
+      } catch {
+        setError("That PGN couldn't be read. Check the moves and try again.");
+        return;
+      }
+      setProgress({ done: 0, total: 1 });
       const engine = new UciEngine();
       engineRef.current = engine;
-      await engine.init(3);
-      const r = await analyzeGame(pgn, engine, {
-        depth: 14,
-        onProgress: (done, total) => setProgress({ done, total }),
-      });
-      setReview(r);
-      setPly(r.moves.length);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Analysis failed");
-    } finally {
-      setProgress(null);
-    }
-  }, [pgn]);
+      try {
+        const [openings] = await Promise.all([loadOpenings(), engine.init(3)]);
+        const r = await analyzeGame(choice.pgn, engine, {
+          depth,
+          openings,
+          onProgress: (done, total) => setProgress({ done, total }),
+        });
+        setReview(r);
+        setPly(0);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setError(e instanceof Error ? e.message : "Analysis failed.");
+      } finally {
+        if (engineRef.current === engine) {
+          engine.terminate();
+          engineRef.current = null;
+          setProgress(null);
+        }
+      }
+    },
+    [depth],
+  );
 
+  const cancel = () => {
+    engineRef.current?.terminate();
+    engineRef.current = null;
+    setProgress(null);
+  };
+
+  const total = review?.moves.length ?? 0;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!review || (e.target as HTMLElement).tagName === "TEXTAREA") return;
-      if (e.key === "ArrowRight") setPly((p) => Math.min(review.moves.length, p + 1));
-      if (e.key === "ArrowLeft") setPly((p) => Math.max(0, p - 1));
+      const tag = (e.target as HTMLElement).tagName;
+      if (!review || tag === "TEXTAREA" || tag === "INPUT") return;
+      const go: Record<string, (p: number) => number> = {
+        ArrowRight: (p) => Math.min(total, p + 1),
+        ArrowLeft: (p) => Math.max(0, p - 1),
+        Home: () => 0,
+        End: () => total,
+      };
+      if (go[e.key]) {
+        e.preventDefault();
+        setPly(go[e.key]);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [review]);
+  }, [review, total]);
 
   const current = review && ply > 0 ? review.moves[ply - 1] : null;
   const fen = current ? current.fenAfter : review ? review.moves[0].fenBefore : START;
-  const arrows = useMemo(() => {
-    const next = review?.moves[ply];
-    return next?.bestUci
-      ? [{ startSquare: next.bestUci.slice(0, 2), endSquare: next.bestUci.slice(2, 4), color: "#16a34a" }]
-      : [];
-  }, [review, ply]);
+
+  const { arrows, squareStyles } = useMemo(() => {
+    const styles: Record<string, CSSProperties> = {};
+    const arr: { startSquare: string; endSquare: string; color: string }[] = [];
+    if (current) {
+      const tint = TINT[current.cls] ?? "rgba(250,204,21,.35)";
+      styles[current.uci.slice(0, 2)] = { background: tint };
+      styles[current.uci.slice(2, 4)] = { background: tint };
+      if (current.bestUci && current.bestUci !== current.uci && current.cls !== "book") {
+        arr.push({ startSquare: current.bestUci.slice(0, 2), endSquare: current.bestUci.slice(2, 4), color: "rgba(22,163,74,.85)" });
+      }
+    }
+    return { arrows: arr, squareStyles: styles };
+  }, [current]);
+
+  const scoreLabel = useMemo(() => {
+    if (!current) return formatScore(review?.initialScore);
+    if (current.scoreAfter) return formatScore(current.scoreAfter);
+    // No engine score means the game ended on this move.
+    const end = new Chess(current.fenAfter);
+    if (end.isCheckmate()) return current.color === "w" ? "1-0" : "0-1";
+    return end.isGameOver() ? "½-½" : "–";
+  }, [current, review]);
+  const whitePct = review ? review.whiteWinPcts[ply] : 50;
+  const whiteName = game?.white ?? (game && headerName(game.pgn, "White")) ?? "White";
+  const blackName = game?.black ?? (game && headerName(game.pgn, "Black")) ?? "Black";
+  const player = (c: "w" | "b") => (
+    <div className="flex items-center gap-2 py-1.5 text-sm">
+      <span className={`h-3 w-3 rounded-sm ${c === "w" ? "bg-neutral-100" : "border border-neutral-500 bg-neutral-900"}`} />
+      <span className="font-medium">{c === "w" ? whiteName : blackName}</span>
+      {(c === "w" ? game?.whiteRating : game?.blackRating) && (
+        <span className="text-neutral-500">({c === "w" ? game?.whiteRating : game?.blackRating})</span>
+      )}
+    </div>
+  );
 
   return (
-    <main className="mx-auto grid max-w-6xl items-start gap-6 p-4 md:grid-cols-[minmax(0,560px)_1fr]">
-      <section>
-        <Chessboard options={{ position: fen, boardOrientation: flipped ? "black" : "white", allowDragging: false, arrows }} />
-        {review && <EvalGraph winPcts={review.whiteWinPcts} ply={ply} onSelect={setPly} />}
+    <div className="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 py-6 lg:grid-cols-[minmax(0,600px)_1fr]">
+      <section className="min-w-0">
+        {player(flipped ? "w" : "b")}
+        <div className="flex gap-2">
+          <EvalBar whitePct={whitePct} label={scoreLabel} flipped={flipped} />
+          <div className="min-w-0 flex-1">
+            <Chessboard
+              options={{
+                position: fen,
+                boardOrientation: flipped ? "black" : "white",
+                allowDragging: false,
+                arrows,
+                squareStyles,
+                darkSquareStyle: { backgroundColor: "#769656" },
+                lightSquareStyle: { backgroundColor: "#eeeed2" },
+              }}
+            />
+          </div>
+        </div>
+        {player(flipped ? "b" : "w")}
+        {review && (
+          <div className="mt-2 overflow-hidden rounded border border-neutral-800">
+            <EvalGraph winPcts={review.whiteWinPcts} ply={ply} onSelect={setPly} />
+          </div>
+        )}
         <div className="mt-2 flex gap-2 text-sm">
-          <button className="rounded border px-3 py-1" onClick={() => setPly(0)}>⏮</button>
-          <button className="rounded border px-3 py-1" onClick={() => setPly((p) => Math.max(0, p - 1))}>◀</button>
-          <button className="rounded border px-3 py-1" onClick={() => review && setPly((p) => Math.min(review.moves.length, p + 1))}>▶</button>
-          <button className="rounded border px-3 py-1" onClick={() => setFlipped((f) => !f)}>Flip</button>
+          {[
+            { label: "First move", icon: "⏮", fn: () => setPly(0) },
+            { label: "Previous move", icon: "◀", fn: () => setPly((p) => Math.max(0, p - 1)) },
+            { label: "Next move", icon: "▶", fn: () => setPly((p) => Math.min(total, p + 1)) },
+            { label: "Last move", icon: "⏭", fn: () => setPly(total) },
+          ].map((b) => (
+            <button key={b.label} aria-label={b.label} title={b.label} onClick={b.fn} disabled={!review}
+              className="flex-1 rounded border border-neutral-700 py-1.5 hover:bg-neutral-800 disabled:opacity-40">
+              {b.icon}
+            </button>
+          ))}
+          <button className="rounded border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800" onClick={() => setFlipped((f) => !f)}>
+            Flip
+          </button>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h1 className="text-2xl font-semibold">Game Review</h1>
-        <textarea
-          className="h-28 w-full rounded border bg-transparent p-2 font-mono text-sm"
-          value={pgn}
-          onChange={(e) => setPgn(e.target.value)}
-          aria-label="PGN"
-        />
-        <button
-          className="rounded bg-green-600 px-4 py-2 font-medium text-white disabled:opacity-50"
-          onClick={run}
-          disabled={!!progress}
-        >
-          {progress ? "Analyzing…" : "Analyze game"}
-        </button>
+      <section className="min-w-0 space-y-4">
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="text-2xl font-semibold">Game Review</h1>
+          <label className="text-sm text-neutral-400">
+            Depth{" "}
+            <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} disabled={!!progress}
+              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200">
+              {DEPTHS.map((d) => (
+                <option key={d.depth} value={d.depth}>{d.label} ({d.depth})</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <ImportPanel onChoose={analyze} busy={!!progress} />
 
         {progress && (
-          <div role="progressbar" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}>
-            <div className="h-2 w-full overflow-hidden rounded bg-neutral-700">
-              <div className="h-full bg-green-500 transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+          <div className="rounded-lg border border-neutral-800 p-4">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span>Analyzing with Stockfish… position {progress.done} of {progress.total}</span>
+              <button onClick={cancel} className="rounded border border-neutral-700 px-2 py-0.5 text-xs hover:bg-neutral-800">Cancel</button>
             </div>
-            <p className="mt-1 text-xs text-neutral-400">Position {progress.done} of {progress.total}</p>
+            <div role="progressbar" aria-label="Analysis progress" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}
+              className="h-2 w-full overflow-hidden rounded bg-neutral-800">
+              <div className="h-full bg-green-500 transition-[width] duration-200" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+            </div>
           </div>
         )}
-        {error && <p className="text-red-500">{error}</p>}
+        {error && <p role="alert" className="rounded border border-red-900 bg-red-950/40 p-3 text-sm text-red-300">{error}</p>}
 
         {review && (
           <>
-            <div className="grid grid-cols-2 gap-3 text-center">
-              {(["w", "b"] as const).map((c) => (
-                <div key={c} className="rounded border p-3">
-                  <div className="text-xs uppercase text-neutral-400">{c === "w" ? "White" : "Black"} accuracy</div>
-                  <div className="text-3xl font-bold">{review.accuracy[c].toFixed(1)}</div>
-                  <div className="mt-1 text-xs text-neutral-400">
-                    {(
-                      [
-                        ["blunder", "blunders"],
-                        ["mistake", "mistakes"],
-                        ["inaccuracy", "inaccuracies"],
-                      ] as const
-                    )
-                      .map(([k, plural]) => {
-                        const n = review.counts[c][k] ?? 0;
-                        return `${n} ${n === 1 ? k : plural}`;
-                      })
-                      .join(" · ")}
+            <div className="rounded-lg bg-neutral-900 p-4" aria-live="polite">
+              {current ? (
+                <div className="flex items-start gap-3">
+                  <span className={`mt-0.5 inline-block min-w-7 rounded px-1.5 py-0.5 text-center text-xs font-bold text-white ${CLASS_META[current.cls].color}`}>
+                    {CLASS_META[current.cls].symbol}
+                  </span>
+                  <div>
+                    <p className={`font-semibold ${CLASS_META[current.cls].text}`}>
+                      {CLASS_META[current.cls].label}
+                      <span className="ml-2 font-mono text-sm font-normal text-neutral-400">{scoreLabel}</span>
+                    </p>
+                    <p className="text-sm text-neutral-300">{describeMove(current)}</p>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <p className="text-sm text-neutral-300">
+                  Review ready. Use the arrow keys or click a move to step through the game.
+                </p>
+              )}
             </div>
-
-            {current && (
-              <p className="rounded bg-neutral-800 p-3 text-sm">
-                <b>{current.san}</b> is {current.cls}.
-                {current.bestSan && current.bestUci !== current.uci && <> Best was <b>{current.bestSan}</b>.</>}
-              </p>
-            )}
-
-            <ol className="grid max-h-80 grid-cols-[auto_1fr_1fr] gap-x-2 gap-y-1 overflow-auto text-sm">
-              {Array.from({ length: Math.ceil(review.moves.length / 2) }, (_, n) => (
-                <li key={n} className="contents">
-                  <span className="text-neutral-500">{n + 1}.</span>
-                  {[review.moves[2 * n], review.moves[2 * n + 1]].map((m, j) =>
-                    m ? (
-                      <button
-                        key={j}
-                        onClick={() => setPly(m.ply)}
-                        className={`flex items-center gap-1 rounded px-1 text-left ${ply === m.ply ? "bg-neutral-700" : ""}`}
-                      >
-                        <span className={`inline-block min-w-5 rounded px-1 text-center text-[10px] text-white ${BADGE[m.cls].color}`}>
-                          {BADGE[m.cls].label}
-                        </span>
-                        {m.san}
-                      </button>
-                    ) : (
-                      <span key={j} />
-                    ),
-                  )}
-                </li>
-              ))}
-            </ol>
+            <Summary review={review} white={whiteName} black={blackName} />
+            <KeyMoments moves={review.moves} onSelect={setPly} />
+            <MoveList moves={review.moves} ply={ply} onSelect={setPly} />
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }

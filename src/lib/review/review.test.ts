@@ -56,3 +56,21 @@ describe("accuracy", () => {
     expect(gameAccuracy([])).toBe(100);
   });
 });
+
+import { describeMove, formatScore } from "./labels";
+
+describe("labels", () => {
+  it("formats scores", () => {
+    expect(formatScore({ cp: 125 })).toBe("+1.25");
+    expect(formatScore({ cp: -40 })).toBe("-0.40");
+    expect(formatScore({ mate: -2 })).toBe("-M2");
+    expect(formatScore(null)).toBe("–");
+  });
+  it("names the better move for mistakes", () => {
+    const text = describeMove({
+      ply: 5, san: "Qxe5+", uci: "h5e5", color: "w", fenBefore: "", fenAfter: "", cls: "blunder",
+      accuracy: 10, winBefore: 55, winAfter: 8, bestUci: "f1c4", bestSan: "Bc4", scoreAfter: null, opening: null,
+    });
+    expect(text).toBe("Qxe5+ is a blunder. The best move was Bc4. Winning chances went from 55% to 8%.");
+  });
+});

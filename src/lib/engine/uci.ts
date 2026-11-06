@@ -37,6 +37,7 @@ export function parseInfo(line: string, sideToMove: "w" | "b"): EngineLine | nul
 export class UciEngine {
   private worker: Worker;
   private listeners = new Set<(line: string) => void>();
+  private pending = new Set<(err: Error) => void>();
 
   constructor(url = "/stockfish/stockfish-19-lite-single.js") {
     this.worker = new Worker(url);
@@ -76,12 +77,14 @@ export class UciEngine {
   analyze(fen: string, depth = 16): Promise<AnalysisResult> {
     const side = (fen.split(" ")[1] as "w" | "b") ?? "w";
     const best = new Map<number, EngineLine>();
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      this.pending.add(reject);
       const l = (line: string) => {
         const info = parseInfo(line, side);
         if (info) best.set(info.multipv, info);
         if (line.startsWith("bestmove")) {
           this.listeners.delete(l);
+          this.pending.delete(reject);
           const mv = line.split(/\s+/)[1];
           resolve({
             fen,
@@ -100,8 +103,12 @@ export class UciEngine {
     this.send("stop");
   }
 
+  /** Stops the worker. Any analysis still running rejects with an AbortError. */
   terminate() {
     this.worker.terminate();
     this.listeners.clear();
+    const err = new DOMException("Analysis cancelled", "AbortError");
+    this.pending.forEach((reject) => reject(err));
+    this.pending.clear();
   }
 }

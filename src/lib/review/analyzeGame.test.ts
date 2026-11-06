@@ -52,3 +52,15 @@ describe("analyzeGame", () => {
     await expect(analyzeGame("", fake)).rejects.toThrow();
   });
 });
+
+describe("opening book", () => {
+  it("marks opening moves as book and names the opening", async () => {
+    const { default: table } = await import("../openings/openings.json");
+    const r = await analyzeGame("1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Rg1", fake, {
+      openings: table as unknown as Record<string, [string, string]>,
+    });
+    expect(r.moves.slice(0, 6).every((m) => m.cls === "book")).toBe(true);
+    expect(r.moves[6].cls).not.toBe("book");
+    expect(r.opening?.name).toMatch(/Ruy Lopez/);
+  });
+});

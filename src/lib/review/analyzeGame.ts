@@ -2,7 +2,8 @@ import { Chess, type Move, type PieceSymbol } from "chess.js";
 import type { AnalysisResult } from "../engine/uci";
 import { gameAccuracy, moveAccuracy } from "./accuracy";
 import { classifyMove } from "./classify";
-import type { MoveClass, Side } from "./types";
+import { lookupOpening, type Opening } from "../openings";
+import type { MoveClass, Score, Side } from "./types";
 import { whiteWinPct, winPct } from "./winpct";
 
 export interface Analyzer {
@@ -22,14 +23,22 @@ export interface ReviewedMove {
   winAfter: number;
   bestUci: string | null;
   bestSan: string | null;
+  /** Engine score after the move, White's view (null at game end). */
+  scoreAfter: Score | null;
+  /** Opening name if this move is still in the book. */
+  opening: Opening | null;
 }
 
 export interface GameReview {
   moves: ReviewedMove[];
   /** White's win% at every position (length = moves + 1), for the eval graph. */
   whiteWinPcts: number[];
+  /** Engine score of the starting position, White's view. */
+  initialScore: Score | null;
   accuracy: { w: number; b: number };
   counts: Record<Side, Partial<Record<MoveClass, number>>>;
+  /** Deepest named opening reached while still in book. */
+  opening: Opening | null;
 }
 
 const VALUE: Record<PieceSymbol, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
@@ -50,7 +59,12 @@ function uciOf(m: Move) {
 export async function analyzeGame(
   pgn: string,
   engine: Analyzer,
-  opts: { depth?: number; onProgress?: (done: number, total: number) => void } = {},
+  opts: {
+    depth?: number;
+    onProgress?: (done: number, total: number) => void;
+    /** Opening table from loadOpenings(); enables "book" moves and the opening name. */
+    openings?: Record<string, [string, string]>;
+  } = {},
 ): Promise<GameReview> {
   const game = new Chess();
   game.loadPgn(pgn);
@@ -72,6 +86,15 @@ export async function analyzeGame(
     return 50; // draw
   });
 
+  // A move is "book" while every position from the start is in the opening table.
+  let inBook = !!opts.openings;
+  const bookOpening = history.map((m) => {
+    if (!inBook || !opts.openings) return null;
+    const o = lookupOpening(opts.openings, m.after);
+    if (!o) inBook = false;
+    return o;
+  });
+
   const moves: ReviewedMove[] = history.map((m, i) => {
     const color = m.color as Side;
     const before = results[i];
@@ -88,6 +111,7 @@ export async function analyzeGame(
       isBest,
       isOnlyMove,
       isSacrifice: looksLikeSacrifice(m.after, m),
+      isBook: !!bookOpening[i],
     });
 
     let bestSan: string | null = null;
@@ -116,6 +140,8 @@ export async function analyzeGame(
       winAfter,
       bestUci: before.bestMove,
       bestSan,
+      scoreAfter: results[i + 1].lines[0]?.score ?? null,
+      opening: bookOpening[i],
     };
   });
 
@@ -126,10 +152,12 @@ export async function analyzeGame(
   return {
     moves,
     whiteWinPcts,
+    initialScore: results[0].lines[0]?.score ?? null,
     accuracy: {
       w: gameAccuracy(side("w").map((m) => m.accuracy)),
       b: gameAccuracy(side("b").map((m) => m.accuracy)),
     },
     counts,
+    opening: bookOpening.filter(Boolean).at(-1) ?? null,
   };
 }

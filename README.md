@@ -1,4 +1,4 @@
-# Chess Diamond
+# Diamond Chess
 
 Game review, coach and puzzles in the browser. Stockfish runs client-side (WASM), so analysis costs nothing on the server.
 
