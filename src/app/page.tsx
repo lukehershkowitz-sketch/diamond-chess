@@ -9,8 +9,9 @@ const FEATURES = [
   },
   {
     title: "Puzzles",
-    body: "Rated tactics puzzles that adapt to your level, plus puzzles built from the mistakes in your own games.",
-    soon: true,
+    body: "Rated tactics puzzles from real games that adapt to your level. Pick a theme like forks, pins or mate in 2.",
+    href: "/puzzles",
+    cta: "Solve puzzles",
   },
   {
     title: "Coach",

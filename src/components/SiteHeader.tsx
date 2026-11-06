@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/review", label: "Review" },
-  { href: "/puzzles", label: "Puzzles", soon: true },
+  { href: "/puzzles", label: "Puzzles" },
   { href: "/coach", label: "Coach", soon: true },
 ];
 
@@ -46,7 +46,8 @@ export function SiteFooter() {
       <a className="underline hover:text-neutral-300" href="https://github.com/official-stockfish/Stockfish">Stockfish</a>{" "}
       (GPL-3.0, <a className="underline hover:text-neutral-300" href="https://github.com/nmrugg/stockfish.js">WASM build source</a>).
       Opening names from{" "}
-      <a className="underline hover:text-neutral-300" href="https://github.com/lichess-org/chess-openings">lichess-org/chess-openings</a> (CC0).
+      <a className="underline hover:text-neutral-300" href="https://github.com/lichess-org/chess-openings">lichess-org/chess-openings</a> and puzzles from the{" "}
+      <a className="underline hover:text-neutral-300" href="https://database.lichess.org/#puzzles">Lichess puzzle database</a> (both CC0).
       Not affiliated with Chess.com or Lichess.
     </footer>
   );
