@@ -23,13 +23,13 @@ export default function Home() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:py-20">
       <section className="max-w-2xl">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+        <h1 className="text-4xl font-bold leading-[1.05] tracking-[-0.025em] sm:text-5xl">
           Find out where your games were <span className="text-cyan-400">won and lost</span>.
         </h1>
         <p className="mt-4 text-lg text-neutral-400">
           Full engine game review, free, right in your browser. Your games are analyzed on your own device by Stockfish; nothing is uploaded.
         </p>
-        <Link href="/review" className="mt-8 inline-block rounded-md bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-500">
+        <Link href="/review" className="press mt-8 inline-block rounded-md transition-transform duration-100 bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-500">
           Review your last game
         </Link>
       </section>

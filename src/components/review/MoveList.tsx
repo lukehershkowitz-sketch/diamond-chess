@@ -20,7 +20,7 @@ export function MoveList({ moves, ply, onSelect }: { moves: ReviewedMove[]; ply:
                 ref={ply === m.ply ? active : undefined}
                 onClick={() => onSelect(m.ply)}
                 aria-label={`${m.san}, ${CLASS_META[m.cls].label}`}
-                className={`flex items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-neutral-800 ${ply === m.ply ? "bg-neutral-700" : ""}`}
+                className={`flex items-center gap-1.5 rounded px-1 py-1.5 text-left hover:bg-neutral-800 lg:py-0.5 ${ply === m.ply ? "bg-neutral-700" : ""}`}
               >
                 <span className={`inline-block min-w-5 rounded px-1 text-center text-[10px] font-bold text-white ${CLASS_META[m.cls].color}`}>
                   {CLASS_META[m.cls].symbol}

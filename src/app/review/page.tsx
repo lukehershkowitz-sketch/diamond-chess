@@ -5,12 +5,13 @@ import { EvalGraph } from "@/components/EvalGraph";
 import { EvalBar } from "@/components/review/EvalBar";
 import { ImportPanel, type GameChoice } from "@/components/review/ImportPanel";
 import { KeyMoments } from "@/components/review/KeyMoments";
+import { MoveFeedback } from "@/components/review/MoveFeedback";
 import { MoveList } from "@/components/review/MoveList";
 import { Summary } from "@/components/review/Summary";
 import { UciEngine } from "@/lib/engine/uci";
 import { loadOpenings } from "@/lib/openings";
 import { analyzeGame, type GameReview } from "@/lib/review/analyzeGame";
-import { CLASS_META, describeMove, formatScore } from "@/lib/review/labels";
+import { formatScore } from "@/lib/review/labels";
 import type { MoveClass } from "@/lib/review/types";
 import { Chess } from "chess.js";
 
@@ -28,6 +29,19 @@ const TINT: Partial<Record<MoveClass, string>> = {
   blunder: "rgba(220,38,38,.5)",
 };
 
+/** True when the visitor asked the OS for reduced motion. */
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return reduced;
+}
+
 function headerName(pgn: string, tag: "White" | "Black") {
   return pgn.match(new RegExp(`\\[${tag} "([^"]*)"\\]`))?.[1];
 }
@@ -41,6 +55,7 @@ export default function ReviewPage() {
   const [flipped, setFlipped] = useState(false);
   const [depth, setDepth] = useState(16);
   const engineRef = useRef<UciEngine | null>(null);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => () => engineRef.current?.terminate(), []);
 
@@ -165,11 +180,15 @@ export default function ReviewPage() {
                 squareStyles,
                 darkSquareStyle: { backgroundColor: "#769656" },
                 lightSquareStyle: { backgroundColor: "#eeeed2" },
+                // Short slides keep rapid stepping crisp; none at all for reduced motion.
+                showAnimations: !reducedMotion,
+                animationDurationInMs: 160,
               }}
             />
           </div>
         </div>
         {player(flipped ? "b" : "w")}
+        {review && <MoveFeedback move={current} scoreLabel={scoreLabel} className="mb-2 lg:hidden" />}
         {review && (
           <div className="mt-2 overflow-hidden rounded border border-neutral-800">
             <EvalGraph winPcts={review.whiteWinPcts} ply={ply} onSelect={setPly} />
@@ -183,11 +202,11 @@ export default function ReviewPage() {
             { label: "Last move", icon: "⏭", fn: () => setPly(total) },
           ].map((b) => (
             <button key={b.label} aria-label={b.label} title={b.label} onClick={b.fn} disabled={!review}
-              className="flex-1 rounded border border-neutral-700 py-1.5 hover:bg-neutral-800 disabled:opacity-40">
+              className="flex-1 rounded-md border border-neutral-700 py-2.5 hover:bg-neutral-800 disabled:opacity-40 lg:py-1.5">
               {b.icon}
             </button>
           ))}
-          <button className="rounded border border-neutral-700 px-3 py-1.5 hover:bg-neutral-800" onClick={() => setFlipped((f) => !f)}>
+          <button className="rounded-md border border-neutral-700 px-3 py-2.5 hover:bg-neutral-800 lg:py-1.5" onClick={() => setFlipped((f) => !f)}>
             Flip
           </button>
         </div>
@@ -195,7 +214,7 @@ export default function ReviewPage() {
 
       <section className="min-w-0 space-y-4">
         <div className="flex items-baseline justify-between gap-4">
-          <h1 className="text-2xl font-semibold">Game Review</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Game Review</h1>
           <label className="text-sm text-neutral-400">
             Depth{" "}
             <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} disabled={!!progress}
@@ -212,12 +231,12 @@ export default function ReviewPage() {
         {progress && (
           <div className="rounded-lg border border-neutral-800 p-4">
             <div className="mb-2 flex items-center justify-between text-sm">
-              <span>Analyzing with Stockfish… position {progress.done} of {progress.total}</span>
+              <span className="tabular-nums">Analyzing with Stockfish… position {progress.done} of {progress.total}</span>
               <button onClick={cancel} className="rounded border border-neutral-700 px-2 py-0.5 text-xs hover:bg-neutral-800">Cancel</button>
             </div>
             <div role="progressbar" aria-label="Analysis progress" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}
               className="h-2 w-full overflow-hidden rounded bg-neutral-800">
-              <div className="h-full bg-green-500 transition-[width] duration-200" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+              <div className="h-full origin-left bg-green-500 transition-transform duration-300 ease-out" style={{ transform: `scaleX(${progress.done / progress.total})` }} />
             </div>
           </div>
         )}
@@ -225,26 +244,7 @@ export default function ReviewPage() {
 
         {review && (
           <>
-            <div className="rounded-lg bg-neutral-900 p-4" aria-live="polite">
-              {current ? (
-                <div className="flex items-start gap-3">
-                  <span className={`mt-0.5 inline-block min-w-7 rounded px-1.5 py-0.5 text-center text-xs font-bold text-white ${CLASS_META[current.cls].color}`}>
-                    {CLASS_META[current.cls].symbol}
-                  </span>
-                  <div>
-                    <p className={`font-semibold ${CLASS_META[current.cls].text}`}>
-                      {CLASS_META[current.cls].label}
-                      <span className="ml-2 font-mono text-sm font-normal text-neutral-400">{scoreLabel}</span>
-                    </p>
-                    <p className="text-sm text-neutral-300">{describeMove(current)}</p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-300">
-                  Review ready. Use the arrow keys or click a move to step through the game.
-                </p>
-              )}
-            </div>
+            <MoveFeedback move={current} scoreLabel={scoreLabel} className="hidden lg:block" />
             <Summary review={review} white={whiteName} black={blackName} />
             <KeyMoments moves={review.moves} onSelect={setPly} />
             <MoveList moves={review.moves} ply={ply} onSelect={setPly} />

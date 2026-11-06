@@ -12,7 +12,7 @@ export function EvalGraph({
 }) {
   const data = winPcts.map((w, i) => ({ ply: i, w }));
   return (
-    <div className="h-28 w-full" aria-label="Evaluation graph">
+    <div className="h-28 w-full cursor-pointer" aria-label="Evaluation graph. Click to jump to a move.">
       <ResponsiveContainer>
         <AreaChart
           data={data}

@@ -1,4 +1,6 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/review", label: "Review" },
@@ -7,20 +9,26 @@ const NAV = [
 ];
 
 export function SiteHeader() {
+  const path = usePathname();
   return (
-    <header className="border-b border-neutral-800 bg-neutral-950/80">
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-bold">
+    <header className="chrome sticky top-0 z-20 border-b border-white/5">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-6">
+        <Link href="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-bold tracking-tight">
           <span aria-hidden className="text-xl text-cyan-400">◆</span> Diamond Chess
         </Link>
-        <nav className="flex gap-4 text-sm">
+        <nav className="flex gap-1 text-sm">
           {NAV.map((n) =>
             n.soon ? (
-              <span key={n.href} className="cursor-default text-neutral-600" title="Coming soon">
+              <span key={n.href} className="hidden cursor-default px-3 py-2 text-neutral-600 sm:inline" title="Coming soon">
                 {n.label}
               </span>
             ) : (
-              <Link key={n.href} href={n.href} className="text-neutral-300 hover:text-white">
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={path.startsWith(n.href) ? "page" : undefined}
+                className="rounded-md px-3 py-2 text-neutral-400 hover:text-white aria-[current=page]:bg-white/10 aria-[current=page]:text-white"
+              >
                 {n.label}
               </Link>
             ),

@@ -16,7 +16,7 @@ export function Summary({ review, white, black }: { review: GameReview; white: s
           <span className="font-mono text-neutral-500">{review.opening.eco}</span> {review.opening.name}
         </p>
       )}
-      <table className="w-full text-sm">
+      <table className="w-full text-sm tabular-nums">
         <thead>
           <tr className="text-neutral-400">
             <th className="text-left font-normal" />
@@ -28,7 +28,7 @@ export function Summary({ review, white, black }: { review: GameReview; white: s
           <tr>
             <td className="py-1 text-neutral-400">Accuracy</td>
             {(["w", "b"] as const).map((c) => (
-              <td key={c} className={`text-center text-2xl font-bold ${accColor(review.accuracy[c])}`}>
+              <td key={c} className={`text-center text-2xl font-bold tracking-tight ${accColor(review.accuracy[c])}`}>
                 {review.accuracy[c].toFixed(1)}
               </td>
             ))}
