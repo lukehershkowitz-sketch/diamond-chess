@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { MeshGradient } from "@/components/ui/mesh-gradient";
+
+/** Deep board-room tones from the site palette: kept dark so the headline and its cyan accent stay legible. */
+const HERO_COLORS = ["#0b4f63", "#0f1115", "#123524", "#1b1a44", "#0f3d4a"];
 
 const FEATURES = [
   {
@@ -22,17 +26,26 @@ const FEATURES = [
 export default function Home() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:py-20">
-      <section className="max-w-2xl">
-        <h1 className="text-4xl font-bold leading-[1.05] tracking-[-0.025em] sm:text-5xl">
-          Find out where your games were <span className="text-cyan-400">won and lost</span>.
-        </h1>
-        <p className="mt-4 text-lg text-neutral-400">
-          Full engine game review, free, right in your browser. Your games are analyzed on your own device by Stockfish; nothing is uploaded.
-        </p>
-        <Link href="/review" className="press mt-8 inline-block rounded-md transition-transform duration-100 bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-500">
-          Review your last game
-        </Link>
-      </section>
+      <MeshGradient
+        colors={HERO_COLORS}
+        background="#0f1115"
+        speed={0.35}
+        sharpness={2.2}
+        grain={0.04}
+        className="rounded-2xl border border-white/5 px-6 py-12 sm:px-12 sm:py-16"
+      >
+        <section className="max-w-2xl">
+          <h1 className="text-4xl font-bold leading-[1.05] tracking-[-0.025em] text-balance sm:text-5xl">
+            Find out where your games were <span className="text-cyan-400">won and lost</span>.
+          </h1>
+          <p className="mt-4 text-lg text-neutral-300">
+            Full engine game review, free, right in your browser. Your games are analyzed on your own device by Stockfish; nothing is uploaded.
+          </p>
+          <Link href="/review" className="press mt-8 inline-block rounded-md transition-transform duration-100 bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-500">
+            Review your last game
+          </Link>
+        </section>
+      </MeshGradient>
 
       <section className="mt-16 grid gap-4 sm:grid-cols-3">
         {FEATURES.map((f) => (
