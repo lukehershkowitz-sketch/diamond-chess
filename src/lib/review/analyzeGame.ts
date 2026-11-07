@@ -27,6 +27,10 @@ export interface ReviewedMove {
   scoreAfter: Score | null;
   /** Opening name if this move is still in the book. */
   opening: Opening | null;
+  /** Engine's best continuation from the position before this move (SAN, up to 6 plies). */
+  bestLine: string[];
+  /** Engine's best continuation after the move actually played (SAN, up to 6 plies): the refutation of a mistake. */
+  replyLine: string[];
 }
 
 export interface GameReview {
@@ -50,6 +54,20 @@ function looksLikeSacrifice(fenAfter: string, move: Move): boolean {
   if (risked - gained < 2) return false;
   const g = new Chess(fenAfter);
   return g.moves({ verbose: true }).some((m) => m.to === move.to && m.captured);
+}
+
+/** Converts an engine principal variation (UCI) into SAN, stopping at the first illegal move. */
+export function pvToSan(fen: string, pv: string[], max = 6): string[] {
+  const g = new Chess(fen);
+  const out: string[] = [];
+  for (const uci of pv.slice(0, max)) {
+    try {
+      out.push(g.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).san);
+    } catch {
+      break;
+    }
+  }
+  return out;
 }
 
 function uciOf(m: Move) {
@@ -142,6 +160,8 @@ export async function analyzeGame(
       bestSan,
       scoreAfter: results[i + 1].lines[0]?.score ?? null,
       opening: bookOpening[i],
+      bestLine: pvToSan(fens[i], before.lines[0]?.pv ?? []),
+      replyLine: pvToSan(fens[i + 1], results[i + 1].lines[0]?.pv ?? []),
     };
   });
 

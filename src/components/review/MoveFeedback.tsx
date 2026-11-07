@@ -1,8 +1,20 @@
+import type { ReactNode } from "react";
 import type { ReviewedMove } from "@/lib/review/analyzeGame";
 import { CLASS_META, describeMove } from "@/lib/review/labels";
 
 /** Verdict for the current move. Static on purpose: it changes on every arrow-key press. */
-export function MoveFeedback({ move, scoreLabel, className = "" }: { move: ReviewedMove | null; scoreLabel: string; className?: string }) {
+export function MoveFeedback({
+  move,
+  scoreLabel,
+  className = "",
+  coach,
+}: {
+  move: ReviewedMove | null;
+  scoreLabel: string;
+  className?: string;
+  /** Optional coach explanation slot shown under the verdict. */
+  coach?: ReactNode;
+}) {
   return (
     <div className={`min-h-[4.5rem] rounded-lg bg-neutral-900 p-4 ${className}`} aria-live="polite">
       {move ? (
@@ -16,6 +28,7 @@ export function MoveFeedback({ move, scoreLabel, className = "" }: { move: Revie
               <span className="ml-2 font-mono text-sm font-normal tabular-nums text-neutral-400">{scoreLabel}</span>
             </p>
             <p className="text-sm leading-relaxed text-neutral-300">{describeMove(move)}</p>
+            {coach}
           </div>
         </div>
       ) : (

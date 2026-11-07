@@ -70,7 +70,19 @@ describe("labels", () => {
     const text = describeMove({
       ply: 5, san: "Qxe5+", uci: "h5e5", color: "w", fenBefore: "", fenAfter: "", cls: "blunder",
       accuracy: 10, winBefore: 55, winAfter: 8, bestUci: "f1c4", bestSan: "Bc4", scoreAfter: null, opening: null,
+      bestLine: [], replyLine: [],
     });
     expect(text).toBe("Qxe5+ is a blunder. The best move was Bc4. Winning chances went from 55% to 8%.");
+  });
+});
+
+import { pvToSan } from "./analyzeGame";
+
+describe("pvToSan", () => {
+  it("converts engine lines to SAN and stops at illegal moves", () => {
+    const start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    expect(pvToSan(start, ["e2e4", "e7e5", "g1f3"])).toEqual(["e4", "e5", "Nf3"]);
+    expect(pvToSan(start, ["e2e4", "e2e4"])).toEqual(["e4"]);
+    expect(pvToSan(start, ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4"], 4)).toHaveLength(4);
   });
 });

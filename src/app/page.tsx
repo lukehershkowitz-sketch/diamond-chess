@@ -16,7 +16,8 @@ const FEATURES = [
   {
     title: "Coach",
     body: "Plain-English explanations of why a move was good or bad, and answers to your questions about any position.",
-    soon: true,
+    href: "/coach",
+    cta: "Ask the coach",
   },
 ];
 
@@ -38,16 +39,11 @@ export default function Home() {
       <section className="mt-16 grid gap-4 sm:grid-cols-3">
         {FEATURES.map((f) => (
           <div key={f.title} className="flex flex-col rounded-lg border border-neutral-800 bg-neutral-900/60 p-5">
-            <h2 className="flex items-center gap-2 font-semibold">
-              {f.title}
-              {f.soon && <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] uppercase text-neutral-400">Soon</span>}
-            </h2>
+            <h2 className="font-semibold">{f.title}</h2>
             <p className="mt-2 flex-1 text-sm text-neutral-400">{f.body}</p>
-            {f.href && (
-              <Link href={f.href} className="mt-4 text-sm font-medium text-green-400 hover:text-green-300">
-                {f.cta} →
-              </Link>
-            )}
+            <Link href={f.href} className="mt-4 text-sm font-medium text-green-400 hover:text-green-300">
+              {f.cta} →
+            </Link>
           </div>
         ))}
       </section>

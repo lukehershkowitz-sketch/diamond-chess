@@ -8,6 +8,9 @@ import { PuzzleRun } from "@/lib/puzzles/run";
 import type { Puzzle } from "@/lib/puzzles/types";
 import { emptyProfile, loadProfile, recordAttempt, saveProfile, type PuzzleProfile } from "@/lib/puzzles/storage";
 import { THEME_LABELS, themeLabel } from "@/lib/puzzles/themes";
+import { CoachExplain } from "@/components/coach/CoachExplain";
+import { useCoach } from "@/components/coach/useCoach";
+import { explainPuzzleRequest } from "@/lib/coach/contexts";
 
 type Status = "loading" | "opponent" | "solving" | "solved" | "error";
 
@@ -45,6 +48,10 @@ export default function PuzzlesPage() {
   const [hint, setHint] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [delta, setDelta] = useState<number | null>(null);
+  /** Position after the opponent's setup move: where the solver starts (used by the coach). */
+  const [startFen, setStartFen] = useState<string | null>(null);
+  const coach = useCoach();
+  const { reset: resetCoach, run: runCoach } = coach;
 
   const runRef = useRef<PuzzleRun | null>(null);
   const ratedRef = useRef(false); // result already counted for this puzzle
@@ -100,6 +107,8 @@ export default function PuzzlesPage() {
       setPuzzle(pz);
       setMissed(false);
       setDelta(null);
+      setStartFen(null);
+      resetCoach();
       setHint(null);
       setSelected(null);
       setFlash(null);
@@ -111,6 +120,7 @@ export default function PuzzlesPage() {
       setMessage("Watch your opponent's move…");
       later(() => {
         const m = run.playSetup();
+        setStartFen(run.fen);
         setFen(run.fen);
         setLastMove([m.from, m.to]);
         setStatus("solving");
@@ -120,7 +130,7 @@ export default function PuzzlesPage() {
       setStatus("error");
       setError(e instanceof Error ? e.message : "Couldn't load a puzzle.");
     }
-  }, [theme, later]);
+  }, [theme, later, resetCoach]);
 
   const next = useCallback(() => {
     clearTimers();
@@ -352,6 +362,13 @@ export default function PuzzlesPage() {
                 </p>
               )}
             </>
+          )}
+          {status === "solved" && current && startFen && (
+            <CoachExplain
+              state={coach}
+              label="Explain this puzzle"
+              onExplain={() => void runCoach(explainPuzzleRequest(current, startFen))}
+            />
           )}
         </div>
 

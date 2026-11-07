@@ -2,6 +2,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Chessboard } from "react-chessboard";
 import { EvalGraph } from "@/components/EvalGraph";
+import { CoachChat } from "@/components/coach/CoachChat";
+import { CoachExplain } from "@/components/coach/CoachExplain";
+import { useCoach, type CoachState } from "@/components/coach/useCoach";
+import { explainMoveRequest, positionContext } from "@/lib/coach/contexts";
 import { EvalBar } from "@/components/review/EvalBar";
 import { ImportPanel, type GameChoice } from "@/components/review/ImportPanel";
 import { KeyMoments } from "@/components/review/KeyMoments";
@@ -55,6 +59,11 @@ export default function ReviewPage() {
   const [flipped, setFlipped] = useState(false);
   const [depth, setDepth] = useState(16);
   const engineRef = useRef<UciEngine | null>(null);
+  const coach = useCoach();
+  const { reset: resetCoach, run: runCoach } = coach;
+  const [explainPly, setExplainPly] = useState<number | null>(null);
+  /** Finished explanations by ply, so revisiting a move doesn't ask (and pay) again. */
+  const [explained, setExplained] = useState<Record<number, string>>({});
   const reducedMotion = useReducedMotion();
 
   useEffect(() => () => engineRef.current?.terminate(), []);
@@ -66,6 +75,9 @@ export default function ReviewPage() {
       setReview(null);
       setPly(0);
       setGame(choice);
+      resetCoach();
+      setExplained({});
+      setExplainPly(null);
       setFlipped(choice.orientation === "black");
       try {
         // Validate the PGN before starting the engine, so typos fail fast.
@@ -97,7 +109,7 @@ export default function ReviewPage() {
         }
       }
     },
-    [depth],
+    [depth, resetCoach],
   );
 
   const cancel = () => {
@@ -142,6 +154,24 @@ export default function ReviewPage() {
     }
     return { arrows: arr, squareStyles: styles };
   }, [current]);
+
+  const explainCurrent = useCallback(async () => {
+    if (!review || ply === 0) return;
+    const p = ply;
+    setExplainPly(p);
+    const text = await runCoach(explainMoveRequest(review, p));
+    if (text) setExplained((e) => ({ ...e, [p]: text }));
+  }, [review, ply, runCoach]);
+
+  const explainState: CoachState =
+    explained[ply] !== undefined
+      ? { text: explained[ply], loading: false, error: null, code: null }
+      : explainPly === ply
+        ? coach
+        : { text: "", loading: false, error: null, code: null };
+  const coachSlot = current ? <CoachExplain state={explainState} onExplain={() => void explainCurrent()} /> : null;
+  const chatContext = useMemo(() => (review ? positionContext(review, ply) : null), [review, ply]);
+  const chatLabel = current ? `After ${Math.ceil(current.ply / 2)}${current.color === "w" ? "." : "…"} ${current.san}` : "Starting position";
 
   const scoreLabel = useMemo(() => {
     if (!current) return formatScore(review?.initialScore);
@@ -188,7 +218,7 @@ export default function ReviewPage() {
           </div>
         </div>
         {player(flipped ? "b" : "w")}
-        {review && <MoveFeedback move={current} scoreLabel={scoreLabel} className="mb-2 lg:hidden" />}
+        {review && <MoveFeedback move={current} scoreLabel={scoreLabel} coach={coachSlot} className="mb-2 lg:hidden" />}
         {review && (
           <div className="mt-2 overflow-hidden rounded border border-neutral-800">
             <EvalGraph winPcts={review.whiteWinPcts} ply={ply} onSelect={setPly} />
@@ -244,8 +274,9 @@ export default function ReviewPage() {
 
         {review && (
           <>
-            <MoveFeedback move={current} scoreLabel={scoreLabel} className="hidden lg:block" />
+            <MoveFeedback move={current} scoreLabel={scoreLabel} coach={coachSlot} className="hidden lg:block" />
             <Summary review={review} white={whiteName} black={blackName} />
+            <CoachChat context={chatContext} positionKey={`${review.moves[0].fenBefore}|${ply}|${review.moves.length}`} label={chatLabel} />
             <KeyMoments moves={review.moves} onSelect={setPly} />
             <MoveList moves={review.moves} ply={ply} onSelect={setPly} />
           </>
