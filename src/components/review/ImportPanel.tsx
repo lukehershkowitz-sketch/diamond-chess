@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import { fetchChessComGames } from "@/lib/import/chesscom";
 import { fetchLichessGames } from "@/lib/import/lichess";
 import type { ImportedGame, Source } from "@/lib/import/types";
+import { LoaderCircle, Search, Upload } from "lucide-react";
+import { Button, buttonClass } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { fieldClass, segItem, segTrack } from "@/components/ui/Field";
 
 type Tab = Source | "pgn";
 
@@ -100,40 +104,30 @@ export function ImportPanel({ onChoose, busy }: { onChoose: (g: GameChoice) => v
   }
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
-      <div role="tablist" className="mb-3 flex gap-1 rounded-md bg-neutral-800 p-1 text-sm">
+    <Card>
+      <div role="tablist" className={`mb-3 ${segTrack}`}>
         {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => switchTab(t.id)}
-            className={`flex-1 rounded px-3 py-1.5 ${tab === t.id ? "bg-neutral-950 font-medium" : "text-neutral-400 hover:text-neutral-200"}`}
-          >
+          <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => switchTab(t.id)} className={segItem(tab === t.id)}>
             {t.label}
           </button>
         ))}
       </div>
 
       {tab === "pgn" ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <textarea
-            className="h-28 w-full rounded border border-neutral-700 bg-neutral-950 p-2 font-mono text-sm"
+            className={`${fieldClass} block h-28 w-full py-2 font-mono text-xs leading-relaxed`}
             value={pgn}
             onChange={(e) => setPgn(e.target.value)}
             aria-label="PGN"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              className="rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:opacity-50"
-              disabled={busy || !pgn.trim()}
-              onClick={() => onChoose({ pgn })}
-            >
+            <Button variant="primary" disabled={busy || !pgn.trim()} onClick={() => onChoose({ pgn })}>
               Analyze game
-            </button>
-            <label className="cursor-pointer rounded border border-neutral-700 px-3 py-2 text-sm hover:bg-neutral-800">
-              Upload .pgn
-              <input type="file" accept=".pgn,text/plain" className="hidden" onChange={onFile} />
+            </Button>
+            <label className={buttonClass({ variant: "secondary", className: "cursor-pointer" })}>
+              <Upload size={16} aria-hidden /> Upload .pgn
+              <input type="file" accept=".pgn,text/plain" className="sr-only" onChange={onFile} />
             </label>
           </div>
         </div>
@@ -141,37 +135,35 @@ export function ImportPanel({ onChoose, busy }: { onChoose: (g: GameChoice) => v
         <>
           <form onSubmit={fetchGames} className="flex gap-2">
             <input
-              className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2"
+              className={`${fieldClass} h-11 min-w-0 flex-1`}
               placeholder={`${tab === "chesscom" ? "Chess.com" : "Lichess"} username`}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               aria-label="Username"
               autoComplete="off"
             />
-            <button
-              className="rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:opacity-50"
-              disabled={loading || !username.trim()}
-            >
+            <Button type="submit" variant="primary" disabled={loading || !username.trim()}>
+              {loading ? <LoaderCircle size={16} className="animate-spin" aria-hidden /> : <Search size={16} aria-hidden />}
               {loading ? "Loading…" : "Find games"}
-            </button>
+            </Button>
           </form>
           {games && games.length > 0 && (
-            <ul className="mt-3 max-h-72 divide-y divide-neutral-800 overflow-auto rounded border border-neutral-800">
+            <ul className="mt-3 max-h-72 divide-y divide-line overflow-auto rounded-sm border border-line">
               {games.map((g) => (
                 <li key={g.id}>
                   <button
                     disabled={busy}
                     onClick={() => chooseImported(g)}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-neutral-800 disabled:opacity-50"
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-raised disabled:opacity-50"
                   >
-                    <span className="w-14 shrink-0 text-xs capitalize text-neutral-400">{g.timeClass}</span>
+                    <span className="w-14 shrink-0 text-xs capitalize text-muted">{g.timeClass}</span>
                     <span className="min-w-0 flex-1 truncate">
-                      {g.white} {g.whiteRating ? <span className="text-neutral-500">({g.whiteRating})</span> : null}
-                      <span className="text-neutral-500"> vs </span>
-                      {g.black} {g.blackRating ? <span className="text-neutral-500">({g.blackRating})</span> : null}
+                      {g.white} {g.whiteRating ? <span className="text-muted">({g.whiteRating})</span> : null}
+                      <span className="text-muted"> vs </span>
+                      {g.black} {g.blackRating ? <span className="text-muted">({g.blackRating})</span> : null}
                     </span>
-                    <span className="w-10 shrink-0 text-center font-mono">{g.result}</span>
-                    <span className="hidden w-20 shrink-0 text-right text-xs text-neutral-500 sm:block">
+                    <span className="w-10 shrink-0 text-center font-mono text-xs">{g.result}</span>
+                    <span className="hidden w-20 shrink-0 text-right text-xs text-muted sm:block">
                       {new Date(g.date).toLocaleDateString()}
                     </span>
                   </button>
@@ -181,7 +173,7 @@ export function ImportPanel({ onChoose, busy }: { onChoose: (g: GameChoice) => v
           )}
         </>
       )}
-      {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-    </div>
+      {error && <p role="alert" className="mt-3 text-sm text-red-400">{error}</p>}
+    </Card>
   );
 }

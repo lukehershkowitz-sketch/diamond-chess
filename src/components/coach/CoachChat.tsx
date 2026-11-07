@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { ChatTurn, CoachContext } from "@/lib/coach/request";
+import { SendHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { fieldClass } from "@/components/ui/Field";
 import { useCoach } from "./useCoach";
 
 const SUGGESTIONS = ["What's the plan here?", "What's the main threat?", "Why is the engine's move best?"];
@@ -45,30 +49,26 @@ export function CoachChat({ context, positionKey, label }: { context: CoachConte
   const pending = coach.loading ? coach.text : null;
 
   return (
-    <div className="rounded-lg border border-neutral-800">
-      <div className="flex items-baseline justify-between border-b border-neutral-800 px-4 py-2.5">
-        <h2 className="font-semibold">Ask the coach</h2>
-        <span className="truncate pl-3 text-xs text-neutral-500">{label}</span>
-      </div>
+    <Card title="Ask the coach" aside={label} flush>
       <div ref={log} className="max-h-80 space-y-3 overflow-auto px-4 py-3 text-sm" aria-live="polite">
         {turns.length === 0 && !coach.loading && (
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map((s) => (
               <button key={s} onClick={() => void send(s)} disabled={!context}
-                className="rounded-full border border-neutral-700 px-3 py-1.5 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40">
+                className="h-9 rounded-full border border-line-strong px-3 text-soft hover:border-accent/60 hover:text-ink disabled:opacity-40">
                 {s}
               </button>
             ))}
           </div>
         )}
         {turns.map((t, i) => (
-          <p key={i} className={t.role === "user" ? "ml-8 rounded-lg bg-neutral-800 px-3 py-2" : "whitespace-pre-wrap leading-relaxed text-neutral-200"}>
+          <p key={i} className={t.role === "user" ? "ml-8 rounded-md bg-raised px-3 py-2 text-ink" : "whitespace-pre-wrap leading-relaxed text-soft"}>
             {t.content}
           </p>
         ))}
         {pending !== null && (
-          <p className="whitespace-pre-wrap leading-relaxed text-neutral-200">
-            {pending || <span className="text-neutral-500">Thinking…</span>}
+          <p className="whitespace-pre-wrap leading-relaxed text-soft">
+            {pending || <span className="text-muted">Thinking…</span>}
           </p>
         )}
         {coach.error && <p role="alert" className="text-red-300">{coach.error}</p>}
@@ -78,7 +78,7 @@ export function CoachChat({ context, positionKey, label }: { context: CoachConte
           e.preventDefault();
           void send(input);
         }}
-        className="flex gap-2 border-t border-neutral-800 p-2"
+        className="flex gap-2 border-t border-line p-2"
       >
         <input
           value={input}
@@ -87,13 +87,12 @@ export function CoachChat({ context, positionKey, label }: { context: CoachConte
           placeholder={context ? "Ask about this position…" : "Analyze a position first"}
           disabled={!context}
           aria-label="Question for the coach"
-          className="min-w-0 flex-1 rounded-md bg-neutral-950 px-3 py-2 text-sm outline-none ring-1 ring-neutral-800 focus:ring-cyan-500 disabled:opacity-50"
+          className={`${fieldClass} h-11 min-w-0 flex-1`}
         />
-        <button type="submit" disabled={!context || !input.trim() || coach.loading}
-          className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-500 disabled:opacity-40">
-          Ask
-        </button>
+        <Button type="submit" variant="primary" disabled={!context || !input.trim() || coach.loading}>
+          <SendHorizontal size={16} aria-hidden /> Ask
+        </Button>
       </form>
-    </div>
+    </Card>
   );
 }

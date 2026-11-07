@@ -1,30 +1,36 @@
 "use client";
+import { RotateCcw, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { LogoMark } from "@/components/ui/Logo";
 import type { CoachState } from "./useCoach";
 
 /** "Explain with Coach" button that turns into the streamed explanation. */
 export function CoachExplain({ state, onExplain, label = "Explain with Coach" }: { state: CoachState; onExplain: () => void; label?: string }) {
   if (state.error) {
     return (
-      <p role="alert" className="mt-3 text-sm text-red-300">
-        {state.error}{" "}
+      <div role="alert" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-red-300">
+        <span>{state.error}</span>
         {state.code !== "not_configured" && (
-          <button onClick={onExplain} className="underline hover:text-red-200">Try again</button>
+          <Button size="sm" variant="quiet" onClick={onExplain}>
+            <RotateCcw size={14} aria-hidden /> Try again
+          </Button>
         )}
-      </p>
+      </div>
     );
   }
   if (!state.loading && !state.text) {
     return (
-      <button onClick={onExplain}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-cyan-800 bg-cyan-950/40 px-3 py-1.5 text-sm font-medium text-cyan-200 hover:bg-cyan-900/50">
-        <span aria-hidden>◆</span> {label}
-      </button>
+      <Button size="sm" onClick={onExplain} className="mt-3">
+        <Sparkles size={16} className="text-accent" aria-hidden /> {label}
+      </Button>
     );
   }
   return (
-    <div className="mt-3 border-l-2 border-cyan-700 pl-3 text-sm leading-relaxed text-neutral-200" aria-live="polite">
-      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-cyan-400">Coach</div>
-      <p className="whitespace-pre-wrap">{state.text || <span className="text-neutral-500">Thinking…</span>}</p>
+    <div className="mt-3 border-l-2 border-accent pl-3 text-sm leading-relaxed text-soft" aria-live="polite">
+      <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
+        <LogoMark size={14} /> Coach
+      </div>
+      <p className="whitespace-pre-wrap">{state.text || <span className="text-muted">Thinking…</span>}</p>
     </div>
   );
 }

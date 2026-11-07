@@ -24,9 +24,9 @@ export function EvalGraph({
         >
           <XAxis dataKey="ply" hide />
           <YAxis domain={[0, 100]} hide />
-          <ReferenceLine y={50} stroke="#888" strokeDasharray="3 3" />
-          <ReferenceLine x={ply} stroke="#f59e0b" />
-          <Area type="monotone" dataKey="w" stroke="#e5e5e5" fill="#e5e5e5" fillOpacity={0.85} isAnimationActive={false} />
+          <ReferenceLine y={50} stroke="#3d362d" strokeDasharray="3 3" />
+          <ReferenceLine x={ply} stroke="#c9a45a" strokeWidth={1.5} />
+          <Area type="monotone" dataKey="w" stroke="#f3efe8" fill="#f3efe8" fillOpacity={0.9} isAnimationActive={false} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

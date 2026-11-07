@@ -1,7 +1,11 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Chessboard } from "react-chessboard";
+import { ArrowUpDown, ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
 import { EvalGraph } from "@/components/EvalGraph";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { fieldClass } from "@/components/ui/Field";
 import { CoachChat } from "@/components/coach/CoachChat";
 import { CoachExplain } from "@/components/coach/CoachExplain";
 import { useCoach, type CoachState } from "@/components/coach/useCoach";
@@ -188,10 +192,10 @@ export default function ReviewPage() {
   const blackName = game?.black ?? (game && headerName(game.pgn, "Black")) ?? "Black";
   const player = (c: "w" | "b") => (
     <div className="flex items-center gap-2 py-1.5 text-sm">
-      <span className={`h-3 w-3 rounded-sm ${c === "w" ? "bg-neutral-100" : "border border-neutral-500 bg-neutral-900"}`} />
+      <span className={`h-3.5 w-3.5 rounded-[4px] ${c === "w" ? "bg-[#f3efe8]" : "border border-line-strong bg-bg"}`} />
       <span className="font-medium">{c === "w" ? whiteName : blackName}</span>
       {(c === "w" ? game?.whiteRating : game?.blackRating) && (
-        <span className="text-neutral-500">({c === "w" ? game?.whiteRating : game?.blackRating})</span>
+        <span className="font-mono text-xs text-muted">{c === "w" ? game?.whiteRating : game?.blackRating}</span>
       )}
     </div>
   );
@@ -221,37 +225,36 @@ export default function ReviewPage() {
         </div>
         {player(flipped ? "b" : "w")}
         {/* Step controls sit directly under the board so both stay on screen together. */}
-        <div className="flex gap-2 text-sm">
+        <div className="flex gap-2">
           {[
-            { label: "First move", icon: "⏮", fn: () => setPly(0) },
-            { label: "Previous move", icon: "◀", fn: () => setPly((p) => Math.max(0, p - 1)) },
-            { label: "Next move", icon: "▶", fn: () => setPly((p) => Math.min(total, p + 1)) },
-            { label: "Last move", icon: "⏭", fn: () => setPly(total) },
-          ].map((b) => (
-            <button key={b.label} aria-label={b.label} title={b.label} onClick={b.fn} disabled={!review}
-              className="flex-1 rounded-md border border-neutral-700 py-2.5 hover:bg-neutral-800 disabled:opacity-40 lg:py-1.5">
-              {b.icon}
-            </button>
+            { label: "First move", Icon: ChevronFirst, fn: () => setPly(0) },
+            { label: "Previous move", Icon: ChevronLeft, fn: () => setPly((p) => Math.max(0, p - 1)) },
+            { label: "Next move", Icon: ChevronRight, fn: () => setPly((p) => Math.min(total, p + 1)) },
+            { label: "Last move", Icon: ChevronLast, fn: () => setPly(total) },
+          ].map(({ label, Icon, fn }) => (
+            <Button key={label} aria-label={label} title={label} onClick={fn} disabled={!review} stretch>
+              <Icon size={20} aria-hidden />
+            </Button>
           ))}
-          <button className="rounded-md border border-neutral-700 px-3 py-2.5 hover:bg-neutral-800 lg:py-1.5" onClick={() => setFlipped((f) => !f)}>
-            Flip
-          </button>
+          <Button onClick={() => setFlipped((f) => !f)} title="Flip board">
+            <ArrowUpDown size={16} aria-hidden /> Flip
+          </Button>
         </div>
         {review && <MoveFeedback move={current} scoreLabel={scoreLabel} coach={coachSlot} className="mt-2 lg:hidden" />}
         {review && (
-          <div className="mt-2 overflow-hidden rounded border border-neutral-800">
+          <div className="mt-2 overflow-hidden rounded-md border border-line bg-surface">
             <EvalGraph winPcts={review.whiteWinPcts} ply={ply} onSelect={setPly} />
           </div>
         )}
       </section>
 
       <section className="min-w-0 space-y-4">
-        <div className="flex items-baseline justify-between gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight">Game Review</h1>
-          <label className="text-sm text-neutral-400">
-            Depth{" "}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h1 className="text-3xl tracking-[-0.03em]">Game Review</h1>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            Depth
             <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} disabled={!!progress}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200">
+              className={`${fieldClass} h-9 bg-surface pr-2`}>
               {DEPTHS.map((d) => (
                 <option key={d.depth} value={d.depth}>{d.label} ({d.depth})</option>
               ))}
@@ -262,18 +265,18 @@ export default function ReviewPage() {
         <ImportPanel onChoose={analyze} busy={!!progress} />
 
         {progress && (
-          <div className="rounded-lg border border-neutral-800 p-4">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="tabular-nums">Analyzing with Stockfish… position {progress.done} of {progress.total}</span>
-              <button onClick={cancel} className="rounded border border-neutral-700 px-2 py-0.5 text-xs hover:bg-neutral-800">Cancel</button>
+          <Card>
+            <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+              <span className="tabular-nums text-soft">Analyzing with Stockfish… position {progress.done} of {progress.total}</span>
+              <Button size="sm" variant="quiet" onClick={cancel}>Cancel</Button>
             </div>
             <div role="progressbar" aria-label="Analysis progress" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}
-              className="h-2 w-full overflow-hidden rounded bg-neutral-800">
-              <div className="h-full origin-left bg-green-500 transition-transform duration-300 ease-out" style={{ transform: `scaleX(${progress.done / progress.total})` }} />
+              className="h-1.5 w-full overflow-hidden rounded-full bg-raised-2">
+              <div className="h-full origin-left bg-accent transition-transform duration-300 ease-out" style={{ transform: `scaleX(${progress.done / progress.total})` }} />
             </div>
-          </div>
+          </Card>
         )}
-        {error && <p role="alert" className="rounded border border-red-900 bg-red-950/40 p-3 text-sm text-red-300">{error}</p>}
+        {error && <p role="alert" className="rounded-md border border-red-900/70 bg-red-950/30 p-4 text-sm text-red-300">{error}</p>}
 
         {review && (
           <>

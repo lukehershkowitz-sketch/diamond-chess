@@ -8,7 +8,11 @@ import { PuzzleRun } from "@/lib/puzzles/run";
 import type { Puzzle } from "@/lib/puzzles/types";
 import { emptyProfile, loadProfile, recordAttempt, saveProfile, type PuzzleProfile } from "@/lib/puzzles/storage";
 import { THEME_LABELS, themeLabel } from "@/lib/puzzles/themes";
+import { ArrowRight, Eye, Lightbulb, SkipForward } from "lucide-react";
 import { CoachExplain } from "@/components/coach/CoachExplain";
+import { Button } from "@/components/ui/Button";
+import { Eyebrow } from "@/components/ui/Card";
+import { fieldClass } from "@/components/ui/Field";
 import { useCoach } from "@/components/coach/useCoach";
 import { explainPuzzleRequest } from "@/lib/coach/contexts";
 
@@ -241,10 +245,10 @@ export default function PuzzlesPage() {
   const squareStyles = useMemo(() => {
     const s: Record<string, CSSProperties> = {};
     if (lastMove) for (const sq of lastMove) s[sq] = { background: "rgba(250, 204, 21, 0.38)" };
-    if (selected) s[selected] = { background: "rgba(34, 211, 238, 0.45)" };
+    if (selected) s[selected] = { background: "rgba(201, 164, 90, 0.55)" };
     for (const t of legalTargets)
       s[t] = { ...s[t], backgroundImage: "radial-gradient(circle, rgba(0,0,0,.22) 24%, transparent 26%)" };
-    if (hint) s[hint] = { ...s[hint], boxShadow: "inset 0 0 0 4px rgba(34, 211, 238, 0.95)" };
+    if (hint) s[hint] = { ...s[hint], boxShadow: "inset 0 0 0 4px rgba(201, 164, 90, 0.95)" };
     if (flash) s[flash.square] = { ...s[flash.square], background: flash.ok ? "rgba(34,197,94,.6)" : "rgba(239,68,68,.65)" };
     return s;
   }, [lastMove, selected, legalTargets, hint, flash]);
@@ -294,14 +298,14 @@ export default function PuzzlesPage() {
 
       {/* On phones the prompt and actions come straight after the board; on desktop the heading leads. */}
       <section className="flex min-w-0 flex-col gap-4">
-        <div className="order-3 flex items-baseline justify-between gap-4 lg:order-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Puzzles</h1>
-          <label className="text-sm text-neutral-400">
+        <div className="order-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:order-1">
+          <h1 className="text-3xl tracking-[-0.03em]">Puzzles</h1>
+          <label className="flex items-center gap-2 text-sm text-muted">
             Theme{" "}
             <select
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
-              className="max-w-[11rem] rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200"
+              className={`${fieldClass} h-9 max-w-[11rem] bg-surface pr-2`}
             >
               <option value="">All themes</option>
               {themeOptions.map((t) => (
@@ -311,13 +315,13 @@ export default function PuzzlesPage() {
           </label>
         </div>
 
-        <div className="order-4 rounded-lg border border-neutral-800 p-4 lg:order-2">
+        <div className="order-4 rounded-md border border-line bg-surface p-4 lg:order-2">
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-xs uppercase tracking-wide text-neutral-400">Your puzzle rating</div>
+              <Eyebrow>Your puzzle rating</Eyebrow>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold tracking-tight tabular-nums">{Math.round(profile.rating.rating)}</span>
-                {profile.rating.rd > 110 && <span className="text-sm text-neutral-500" title="Your rating is still provisional">?</span>}
+                <span className="font-mono text-4xl font-medium tracking-tight tabular-nums">{Math.round(profile.rating.rating)}</span>
+                {profile.rating.rd > 110 && <span className="text-sm text-muted" title="Your rating is still provisional">?</span>}
                 {delta !== null && (
                   <span className={`text-lg font-semibold tabular-nums ${delta >= 0 ? "text-green-400" : "text-red-400"}`}>
                     {delta >= 0 ? `+${delta}` : delta}
@@ -325,7 +329,7 @@ export default function PuzzlesPage() {
                 )}
               </div>
             </div>
-            <div className="text-right text-sm text-neutral-400 tabular-nums">
+            <div className="text-right text-sm text-muted tabular-nums">
               {solvedCount} / {profile.history.length} solved
             </div>
           </div>
@@ -344,8 +348,12 @@ export default function PuzzlesPage() {
 
         <div
           aria-live="polite"
-          className={`order-1 rounded-lg p-4 lg:order-3 ${
-            status === "solved" && !missed ? "bg-green-950/50" : missed ? "bg-red-950/40" : "bg-neutral-900"
+          className={`order-1 rounded-md border p-4 lg:order-3 ${
+            status === "solved" && !missed
+              ? "border-green-900/70 bg-green-950/30"
+              : missed
+                ? "border-red-900/70 bg-red-950/30"
+                : "border-line bg-surface"
           }`}
         >
           {status === "error" ? (
@@ -354,7 +362,7 @@ export default function PuzzlesPage() {
             <>
               <p className="font-medium">{status === "loading" ? "Loading puzzle…" : message}</p>
               {current && status !== "loading" && (
-                <p className="mt-1 text-sm text-neutral-400">
+                <p className="mt-1 text-sm text-muted">
                   Puzzle rated <span className="tabular-nums">{current.rating}</span>
                   {status === "solved" || missed ? (
                     <> · {current.themes.filter((t) => THEME_LABELS[t]).slice(0, 3).map(themeLabel).join(", ")}</>
@@ -374,33 +382,30 @@ export default function PuzzlesPage() {
 
         <div className="order-2 flex flex-wrap gap-2 lg:order-4">
           {status === "solved" || status === "error" ? (
-            <button onClick={next} className="rounded-md bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-500">
-              Next puzzle
-            </button>
+            <Button variant="primary" onClick={next}>
+              Next puzzle <ArrowRight size={16} aria-hidden />
+            </Button>
           ) : (
             <>
-              <button onClick={showHint} disabled={!canMove || !!hint}
-                className="rounded-md border border-neutral-700 px-4 py-2.5 hover:bg-neutral-800 disabled:opacity-40">
-                Hint
-              </button>
-              <button onClick={showSolution} disabled={!canMove}
-                className="rounded-md border border-neutral-700 px-4 py-2.5 hover:bg-neutral-800 disabled:opacity-40">
-                View solution
-              </button>
-              <button onClick={() => { rate(false); next(); }} disabled={status === "loading"}
-                className="rounded-md border border-neutral-700 px-4 py-2.5 text-neutral-400 hover:bg-neutral-800 disabled:opacity-40">
-                Skip
-              </button>
+              <Button onClick={showHint} disabled={!canMove || !!hint}>
+                <Lightbulb size={16} aria-hidden /> Hint
+              </Button>
+              <Button onClick={showSolution} disabled={!canMove}>
+                <Eye size={16} aria-hidden /> View solution
+              </Button>
+              <Button variant="quiet" onClick={() => { rate(false); next(); }} disabled={status === "loading"}>
+                <SkipForward size={16} aria-hidden /> Skip
+              </Button>
             </>
           )}
           {current && (
             <a href={`https://lichess.org/training/${current.id}`} target="_blank" rel="noreferrer"
-              className="ml-auto self-center text-sm text-neutral-500 underline hover:text-neutral-300">
+              className="ml-auto self-center text-sm text-muted underline decoration-line-strong underline-offset-2 hover:text-soft hover:decoration-accent">
               View on Lichess
             </a>
           )}
         </div>
-        <p className="order-5 text-xs text-neutral-500">
+        <p className="order-5 text-xs text-muted">
           Drag a piece or tap it and then its destination. Your rating is saved in this browser.
         </p>
       </section>

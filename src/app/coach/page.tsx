@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import { CoachChat } from "@/components/coach/CoachChat";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { fieldClass } from "@/components/ui/Field";
 import { UciEngine } from "@/lib/engine/uci";
 import type { CoachContext, EngineLine } from "@/lib/coach/request";
 import { pvToSan } from "@/lib/review/analyzeGame";
@@ -97,53 +100,48 @@ export default function CoachPage() {
             lightSquareStyle: { backgroundColor: "#eeeed2" },
           }}
         />
-        <p className="mt-2 text-sm text-neutral-400">{turn === "w" ? "White" : "Black"} to move</p>
+        <p className="mt-2 text-sm text-muted">{turn === "w" ? "White" : "Black"} to move</p>
       </section>
 
       <section className="flex min-w-0 flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Coach</h1>
-          <p className="mt-1 text-sm text-neutral-400">
+          <h1 className="text-3xl tracking-[-0.03em]">Coach</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
             Paste any position and ask about it. Stockfish analyzes it in your browser and the coach explains what it finds.
           </p>
         </div>
 
-        <form onSubmit={load} className="space-y-2 rounded-lg border border-neutral-800 p-3">
+        <form onSubmit={load} className="space-y-3 rounded-md border border-line bg-surface p-4">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             aria-label="FEN or PGN"
             placeholder="Paste a FEN or a PGN"
-            className="h-20 w-full rounded border border-neutral-700 bg-neutral-950 p-2 font-mono text-xs"
+            className={`${fieldClass} block h-20 w-full py-2 font-mono text-xs leading-relaxed`}
           />
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={analyzing}
-              className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50">
+            <Button type="submit" variant="primary" disabled={analyzing}>
               Load position
-            </button>
-            <button type="button" onClick={() => setInput(START)}
-              className="rounded-md border border-neutral-700 px-3 py-2 text-sm hover:bg-neutral-800">
-              Starting position
-            </button>
+            </Button>
+            <Button onClick={() => setInput(START)}>Starting position</Button>
           </div>
           {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
         </form>
 
-        <div className="rounded-lg border border-neutral-800 p-3">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-400">Stockfish</h2>
-          {analyzing && <p className="text-sm text-neutral-400">Analyzing…</p>}
-          {lines?.length === 0 && <p className="text-sm text-neutral-400">The game is over in this position.</p>}
+        <Card title="Stockfish" aside="Top 3 lines, depth 16">
+          {analyzing && <p className="text-sm text-muted">Analyzing…</p>}
+          {lines?.length === 0 && <p className="text-sm text-muted">The game is over in this position.</p>}
           {lines && lines.length > 0 && (
             <ol className="space-y-1 font-mono text-sm">
               {lines.map((l, i) => (
                 <li key={i} className="flex gap-3">
-                  <span className="w-14 shrink-0 tabular-nums text-neutral-300">{l.score}</span>
-                  <span className="truncate text-neutral-400">{l.moves.join(" ")}</span>
+                  <span className="w-14 shrink-0 tabular-nums text-ink">{l.score}</span>
+                  <span className="truncate text-muted">{l.moves.join(" ")}</span>
                 </li>
               ))}
             </ol>
           )}
-        </div>
+        </Card>
 
         <CoachChat context={context} positionKey={pos.fen} label={`${turn === "w" ? "White" : "Black"} to move`} />
       </section>

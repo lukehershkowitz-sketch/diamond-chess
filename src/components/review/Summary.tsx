@@ -1,5 +1,7 @@
 import type { GameReview } from "@/lib/review/analyzeGame";
 import { CLASS_META, CLASS_ORDER } from "@/lib/review/labels";
+import { Card } from "@/components/ui/Card";
+import { GradeBadge } from "./GradeBadge";
 
 function accColor(a: number) {
   if (a >= 90) return "text-green-400";
@@ -10,15 +12,15 @@ function accColor(a: number) {
 
 export function Summary({ review, white, black }: { review: GameReview; white: string; black: string }) {
   return (
-    <div className="rounded-lg border border-neutral-800 p-4">
+    <Card>
       {review.opening && (
-        <p className="mb-3 text-sm text-neutral-400">
-          <span className="font-mono text-neutral-500">{review.opening.eco}</span> {review.opening.name}
+        <p className="mb-3 text-sm text-muted">
+          <span className="font-mono text-xs text-muted">{review.opening.eco}</span> {review.opening.name}
         </p>
       )}
       <table className="w-full text-sm tabular-nums">
         <thead>
-          <tr className="text-neutral-400">
+          <tr className="text-muted">
             <th className="text-left font-normal" />
             <th className="w-1/4 truncate font-medium">{white}</th>
             <th className="w-1/4 truncate font-medium">{black}</th>
@@ -26,9 +28,9 @@ export function Summary({ review, white, black }: { review: GameReview; white: s
         </thead>
         <tbody>
           <tr>
-            <td className="py-1 text-neutral-400">Accuracy</td>
+            <td className="py-1 text-muted">Accuracy</td>
             {(["w", "b"] as const).map((c) => (
-              <td key={c} className={`text-center text-2xl font-bold tracking-tight ${accColor(review.accuracy[c])}`}>
+              <td key={c} className={`text-center font-mono text-2xl font-medium tracking-tight ${accColor(review.accuracy[c])}`}>
                 {review.accuracy[c].toFixed(1)}
               </td>
             ))}
@@ -36,13 +38,13 @@ export function Summary({ review, white, black }: { review: GameReview; white: s
           {CLASS_ORDER.map((k) => (
             <tr key={k}>
               <td className="py-0.5">
-                <span className={`mr-2 inline-block min-w-5 rounded px-1 text-center text-[10px] font-bold text-white ${CLASS_META[k].color}`}>
-                  {CLASS_META[k].symbol}
+                <span className="inline-flex items-center gap-2">
+                  <GradeBadge cls={k} />
+                  {CLASS_META[k].label}
                 </span>
-                {CLASS_META[k].label}
               </td>
               {(["w", "b"] as const).map((c) => (
-                <td key={c} className={`text-center ${review.counts[c][k] ? CLASS_META[k].text : "text-neutral-600"}`}>
+                <td key={c} className={`text-center ${review.counts[c][k] ? CLASS_META[k].text : "text-muted"}`}>
                   {review.counts[c][k] ?? 0}
                 </td>
               ))}
@@ -50,6 +52,6 @@ export function Summary({ review, white, black }: { review: GameReview; white: s
           ))}
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }
