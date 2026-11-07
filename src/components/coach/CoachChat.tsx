@@ -14,7 +14,7 @@ export function CoachChat({ context, positionKey, label }: { context: CoachConte
   const [input, setInput] = useState("");
   const coach = useCoach();
   const { reset } = coach;
-  const bottom = useRef<HTMLDivElement>(null);
+  const log = useRef<HTMLDivElement>(null);
 
   // A new position means a new conversation.
   const [shownKey, setShownKey] = useState(positionKey);
@@ -25,8 +25,9 @@ export function CoachChat({ context, positionKey, label }: { context: CoachConte
   }
   useEffect(() => reset(), [positionKey, reset]);
 
+  // Follow the conversation inside the chat box only; never scroll the page.
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "nearest" });
+    if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [turns.length, coach.text]);
 
   async function send(question: string) {
@@ -49,7 +50,7 @@ export function CoachChat({ context, positionKey, label }: { context: CoachConte
         <h2 className="font-semibold">Ask the coach</h2>
         <span className="truncate pl-3 text-xs text-neutral-500">{label}</span>
       </div>
-      <div className="max-h-80 space-y-3 overflow-auto px-4 py-3 text-sm" aria-live="polite">
+      <div ref={log} className="max-h-80 space-y-3 overflow-auto px-4 py-3 text-sm" aria-live="polite">
         {turns.length === 0 && !coach.loading && (
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map((s) => (
@@ -71,7 +72,6 @@ export function CoachChat({ context, positionKey, label }: { context: CoachConte
           </p>
         )}
         {coach.error && <p role="alert" className="text-red-300">{coach.error}</p>}
-        <div ref={bottom} />
       </div>
       <form
         onSubmit={(e) => {

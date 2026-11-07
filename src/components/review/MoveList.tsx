@@ -1,15 +1,17 @@
 import type { ReviewedMove } from "@/lib/review/analyzeGame";
 import { CLASS_META } from "@/lib/review/labels";
 import { useEffect, useRef } from "react";
+import { revealWithin } from "@/lib/dom";
 
 export function MoveList({ moves, ply, onSelect }: { moves: ReviewedMove[]; ply: number; onSelect: (p: number) => void }) {
+  const list = useRef<HTMLOListElement>(null);
   const active = useRef<HTMLButtonElement>(null);
-  // Braces matter: newer browsers return a Promise from scrollIntoView, which React would treat as a cleanup.
+  // Keep the current move visible inside the list only; the page itself must not move.
   useEffect(() => {
-    active.current?.scrollIntoView({ block: "nearest" });
+    if (list.current && active.current) revealWithin(list.current, active.current);
   }, [ply]);
   return (
-    <ol className="grid max-h-72 grid-cols-[2rem_1fr_1fr] gap-x-1 gap-y-0.5 overflow-auto rounded border border-neutral-800 p-2 text-sm">
+    <ol ref={list} className="grid max-h-72 grid-cols-[2rem_1fr_1fr] gap-x-1 gap-y-0.5 overflow-auto rounded border border-neutral-800 p-2 text-sm">
       {Array.from({ length: Math.ceil(moves.length / 2) }, (_, n) => (
         <li key={n} className="contents">
           <span className="py-0.5 text-neutral-500">{n + 1}.</span>

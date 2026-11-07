@@ -46,8 +46,10 @@ function useReducedMotion() {
   return reduced;
 }
 
+/** Player name from a PGN header; "?" and blank mean unknown in PGN, so they count as missing. */
 function headerName(pgn: string, tag: "White" | "Black") {
-  return pgn.match(new RegExp(`\\[${tag} "([^"]*)"\\]`))?.[1];
+  const name = pgn.match(new RegExp(`\\[${tag} "([^"]*)"\\]`))?.[1]?.trim();
+  return name && name !== "?" ? name : undefined;
 }
 
 export default function ReviewPage() {
@@ -195,7 +197,7 @@ export default function ReviewPage() {
   );
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 py-6 lg:grid-cols-[minmax(0,600px)_1fr]">
+    <div className="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 py-6 lg:grid-cols-[minmax(0,min(600px,calc(100svh-15rem)))_1fr]">
       <section className="min-w-0">
         {player(flipped ? "w" : "b")}
         <div className="flex gap-2">
@@ -218,13 +220,8 @@ export default function ReviewPage() {
           </div>
         </div>
         {player(flipped ? "b" : "w")}
-        {review && <MoveFeedback move={current} scoreLabel={scoreLabel} coach={coachSlot} className="mb-2 lg:hidden" />}
-        {review && (
-          <div className="mt-2 overflow-hidden rounded border border-neutral-800">
-            <EvalGraph winPcts={review.whiteWinPcts} ply={ply} onSelect={setPly} />
-          </div>
-        )}
-        <div className="mt-2 flex gap-2 text-sm">
+        {/* Step controls sit directly under the board so both stay on screen together. */}
+        <div className="flex gap-2 text-sm">
           {[
             { label: "First move", icon: "⏮", fn: () => setPly(0) },
             { label: "Previous move", icon: "◀", fn: () => setPly((p) => Math.max(0, p - 1)) },
@@ -240,6 +237,12 @@ export default function ReviewPage() {
             Flip
           </button>
         </div>
+        {review && <MoveFeedback move={current} scoreLabel={scoreLabel} coach={coachSlot} className="mt-2 lg:hidden" />}
+        {review && (
+          <div className="mt-2 overflow-hidden rounded border border-neutral-800">
+            <EvalGraph winPcts={review.whiteWinPcts} ply={ply} onSelect={setPly} />
+          </div>
+        )}
       </section>
 
       <section className="min-w-0 space-y-4">
