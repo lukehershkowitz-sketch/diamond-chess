@@ -11,6 +11,7 @@ import { CoachExplain } from "@/components/coach/CoachExplain";
 import { useCoach, type CoachState } from "@/components/coach/useCoach";
 import { explainMoveRequest, positionContext } from "@/lib/coach/contexts";
 import { EvalBar } from "@/components/review/EvalBar";
+import { BoardGradeBadge } from "@/components/review/GradeBadge";
 import { ImportPanel, type GameChoice } from "@/components/review/ImportPanel";
 import { KeyMoments } from "@/components/review/KeyMoments";
 import { MoveFeedback } from "@/components/review/MoveFeedback";
@@ -161,6 +162,21 @@ export default function ReviewPage() {
     return { arrows: arr, squareStyles: styles };
   }, [current]);
 
+  // Draws each square like the board's default (fill + highlight), adding the move's grade badge
+  // on the square the piece landed on, for every grade.
+  const squareRenderer = useCallback(
+    ({ square, children }: { square: string; children?: React.ReactNode }) => {
+      const graded = current && square === current.uci.slice(2, 4) ? current.cls : null;
+      return (
+        <div className={graded ? "@container relative" : undefined} style={{ width: "100%", height: "100%", ...squareStyles[square] }}>
+          {children}
+          {graded && <BoardGradeBadge cls={graded} />}
+        </div>
+      );
+    },
+    [current, squareStyles],
+  );
+
   const explainCurrent = useCallback(async () => {
     if (!review || ply === 0) return;
     const p = ply;
@@ -214,6 +230,7 @@ export default function ReviewPage() {
                 allowDragging: false,
                 arrows,
                 squareStyles,
+                squareRenderer,
                 darkSquareStyle: { backgroundColor: "#769656" },
                 lightSquareStyle: { backgroundColor: "#eeeed2" },
                 // Short slides keep rapid stepping crisp; none at all for reduced motion.
